@@ -49,8 +49,8 @@ impl<S: Eq + Hash> NFA<S> {
         result
     }
 
-    pub fn add_edge(&mut self, from: usize, symbol: Eta<S>, to: usize) -> bool {
-        match symbol {
+    pub fn add_edge(&mut self, from: usize, symbol: impl Into<Eta<S>>, to: usize) -> bool {
+        match symbol.into() {
             Eta::Symbol(s) => self.states[from].edges.insert(s, to) == None,
             Eta::Eta => self.states[from].eta_edges.insert(to),
         }

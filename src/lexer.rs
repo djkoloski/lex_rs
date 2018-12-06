@@ -3,7 +3,7 @@ use dfa::DFA;
 use nfa::{Eta, NFA};
 use parse::Result;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct Lexer<T> {
     dfa: DFA<char>,
     state_to_token: HashMap<usize, T>,
@@ -11,7 +11,7 @@ pub struct Lexer<T> {
 }
 
 impl<'a, T: 'a + Clone> Lexer<T> {
-    pub fn from_entries(entries: impl Iterator<Item = &'a (T, &'a str)>) -> Result<Lexer<T>> {
+    pub fn from_entries(entries: impl Iterator<Item = (T, &'a str)>) -> Result<Lexer<T>> {
         let mut nfa = NFA::new();
         let root = nfa.add_state();
         let mut terminal_to_token = HashMap::new();
@@ -26,7 +26,7 @@ impl<'a, T: 'a + Clone> Lexer<T> {
         let mut state_to_token = HashMap::new();
         for state in dfa.states() {
             let powerset = &state_to_powerset[&state_to_partition[&state][0]];
-            if let Some(&token) = powerset.iter().find_map(|s| terminal_to_token.get(s)) {
+            if let Some(token) = powerset.iter().find_map(|s| terminal_to_token.get(s)) {
                 state_to_token.insert(state, token.clone());
             }
         }
@@ -47,4 +47,12 @@ impl<'a, T: 'a + Clone> Lexer<T> {
             start,
         })
     }
+
+    // pub fn to_c(&self) -> String {
+    //     let mut result = String::new();
+
+    //     for state in self.dfa.states() {
+    //         result += "STATE_" + state;
+    //     }
+    // }
 }

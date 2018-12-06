@@ -4,12 +4,12 @@ use std::{
     hash::Hash,
 };
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 struct State<S: Eq + Hash> {
     edges: HashMap<S, usize>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct DFA<S: Eq + Hash> {
     states: Vec<State<S>>,
 }
