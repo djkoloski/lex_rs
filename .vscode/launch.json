@@ -9,7 +9,7 @@
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${workspaceFolder}/target/debug/lex_rs.exe",
-            "args": ["input.lex"],
+            "args": ["examples/cpp/cpp.lex"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

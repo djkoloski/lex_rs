@@ -9,20 +9,20 @@ use std::{
 };
 use dfa::DFA;
 
-pub enum Eta<S> {
+pub enum Epsilon<S> {
     Symbol(S),
-    Eta,
+    Epsilon,
 }
 
-impl<S: Eq + Hash> From<S> for Eta<S> {
-    fn from(symbol: S) -> Eta<S> {
-        Eta::Symbol(symbol)
+impl<S: Eq + Hash> From<S> for Epsilon<S> {
+    fn from(symbol: S) -> Epsilon<S> {
+        Epsilon::Symbol(symbol)
     }
 }
 
 struct State<S: Eq + Hash> {
     edges: HashMap<S, usize>,
-    eta_edges: HashSet<usize>,
+    epsilon_edges: HashSet<usize>,
 }
 
 pub struct NFA<S: Eq + Hash> {
@@ -44,15 +44,15 @@ impl<S: Eq + Hash> NFA<S> {
         let result = self.states.len();
         self.states.push(State {
             edges: Default::default(),
-            eta_edges: Default::default(),
+            epsilon_edges: Default::default(),
         });
         result
     }
 
-    pub fn add_edge(&mut self, from: usize, symbol: impl Into<Eta<S>>, to: usize) -> bool {
+    pub fn add_edge(&mut self, from: usize, symbol: impl Into<Epsilon<S>>, to: usize) -> bool {
         match symbol.into() {
-            Eta::Symbol(s) => self.states[from].edges.insert(s, to) == None,
-            Eta::Eta => self.states[from].eta_edges.insert(to),
+            Epsilon::Symbol(s) => self.states[from].edges.insert(s, to) == None,
+            Epsilon::Epsilon => self.states[from].epsilon_edges.insert(to),
         }
     }
 
@@ -60,23 +60,23 @@ impl<S: Eq + Hash> NFA<S> {
         0..self.len()
     }
 
-    pub fn edges(&self, from: usize) -> impl Iterator<Item = (Eta<&S>, &usize)> {
+    pub fn edges(&self, from: usize) -> impl Iterator<Item = (Epsilon<&S>, &usize)> {
         self.states[from].edges
             .iter()
-            .map(|(s, to)| (Eta::Symbol(s), to))
+            .map(|(s, to)| (Epsilon::Symbol(s), to))
             .chain(
-                self.states[from].eta_edges.iter()
-                    .map(|to| (Eta::Eta, to)))
+                self.states[from].epsilon_edges.iter()
+                    .map(|to| (Epsilon::Epsilon, to)))
     }
 
-    fn eta_set(&self, states: impl Iterator<Item = usize>) -> Vec<usize> {
+    fn epsilon_closure(&self, states: impl Iterator<Item = usize>) -> Vec<usize> {
         let mut result = Vec::new();
 
         let mut queue: Vec<_> = states.collect();
         while let Some(current) = queue.pop() {
             if let Err(insert_index) = result.binary_search(&current) {
                 result.insert(insert_index, current);
-                for &to in &self.states[current].eta_edges {
+                for &to in &self.states[current].epsilon_edges {
                     queue.push(to);
                 }
             }
@@ -91,7 +91,7 @@ impl<S: Clone + Eq + Hash> NFA<S> {
         let mut result = DFA::new();
         let mut powerset_to_state = HashMap::new();
 
-        let start_powerset = self.eta_set(iter::once(start));
+        let start_powerset = self.epsilon_closure(iter::once(start));
         let start_state = result.add_state();
         powerset_to_state.insert(start_powerset.clone(), start_state);
 
@@ -106,7 +106,7 @@ impl<S: Clone + Eq + Hash> NFA<S> {
             }
 
             for (symbol, next_set) in transitions.drain() {
-                let next_powerset = self.eta_set(next_set.iter().cloned());
+                let next_powerset = self.epsilon_closure(next_set.iter().cloned());
                 let next_state = powerset_to_state.entry(next_powerset.clone()).or_insert_with(|| {
                     let state = result.add_state();
                     queue.push((next_powerset, state));

@@ -41,7 +41,7 @@ impl<S: Eq + Hash> DFA<S> {
         0..self.len()
     }
 
-    pub fn edges(&self, from: usize) -> impl Iterator<Item = (&S, &usize)> {
+    pub fn edges(&self, from: usize) -> impl ExactSizeIterator<Item = (&S, &usize)> {
         self.states[from].edges.iter()
     }
 }
@@ -67,48 +67,54 @@ impl<S: Clone + Eq + Hash> DFA<S> {
             state_to_partition_index.insert(state, 0);
         }
 
-        let mut partition_index = 0;
-        while partition_index < partitions.len() {
-            let mut different = Vec::new();
+        let mut done = false;
+        while !done {
+            done = true;
 
-            {
-                let partition = &mut partitions[partition_index];
-                let leader = partition[0];
-                let leader_state = &self.states[leader];
+            let mut partition_index = 0;
+            while partition_index < partitions.len() {
+                let mut different = Vec::new();
 
-                let mut state_index = 1;
-                while state_index < partition.len() {
-                    let follower = partition[state_index];
-                    let follower_state = &self.states[follower];
+                {
+                    let partition = &mut partitions[partition_index];
+                    let leader = partition[0];
+                    let leader_state = &self.states[leader];
 
-                    let equivalent = compare_terminal(leader, follower)
-                        && leader_state.edges.len() == follower_state.edges.len()
-                        && leader_state.edges
-                            .iter()
-                            .all(|(symbol, leader_to)| {
-                                if let Some(follower_to) = follower_state.edges.get(symbol) {
-                                    state_to_partition_index.get(leader_to) == state_to_partition_index.get(follower_to)
-                                } else {
-                                    false
-                                }
-                            });
+                    let mut state_index = 1;
+                    while state_index < partition.len() {
+                        let follower = partition[state_index];
+                        let follower_state = &self.states[follower];
 
-                    if equivalent {
-                        state_index += 1;
-                    } else {
-                        partition.remove(state_index);
-                        different.push(follower);
+                        let equivalent = compare_terminal(leader, follower)
+                            && leader_state.edges.len() == follower_state.edges.len()
+                            && leader_state.edges
+                                .iter()
+                                .all(|(symbol, leader_to)| {
+                                    if let Some(follower_to) = follower_state.edges.get(symbol) {
+                                        state_to_partition_index.get(leader_to) == state_to_partition_index.get(follower_to)
+                                    } else {
+                                        false
+                                    }
+                                });
+
+                        if equivalent {
+                            state_index += 1;
+                        } else {
+                            partition.remove(state_index);
+                            different.push(follower);
+                        }
                     }
                 }
-            }
 
-            if different.len() > 0 {
-                for &state in &different {
-                    state_to_partition_index.insert(state, partitions.len());
+                if different.len() > 0 {
+                    for &state in &different {
+                        state_to_partition_index.insert(state, partitions.len());
+                    }
+                    partitions.push(different);
+                    done = false;
+                } else {
+                    partition_index += 1;
                 }
-                partitions.push(different);
-            } else {
-                partition_index += 1;
             }
         }
 
