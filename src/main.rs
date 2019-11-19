@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod dfa;
 mod lexer;
 mod nfa;
@@ -20,6 +22,6 @@ fn main() {
 fn generate_lexer_from_entries(entries: &str) -> Lexer<&str> {
     Lexer::from_entries(entries.lines().map(|line| {
         let (token, regex) = line.split_at(line.find(char::is_whitespace).unwrap());
-        (token, regex.trim_left())
+        (token, regex.trim_start())
     })).unwrap()
 }
